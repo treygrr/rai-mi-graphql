@@ -29,6 +29,10 @@ type AddProductToCartInput = {
   qty: number
 }
 
+type ClearCartInput = {
+  cartId: string
+}
+
 const products: Product[] = [
   {
     id: "8bceb990-9335-403b-9056-496f275cb8f4",
@@ -66,6 +70,16 @@ const carts: Cart[] = [
         qty: 5,
       }
     ],
+  },
+  {
+    id: '4a797e70-cdba-4738-b7a5-ca6a63a2ddc1',
+    lines: [
+      {
+        id: randomUUID(),
+        product: products[0],
+        qty: 5,
+      }
+    ],
   }
 ]
 
@@ -91,7 +105,7 @@ export const schema = createSchema({
       id: ID!,
       title: String!,
       stock: Int!,
-      price: Float!
+      price: Float!,
     }
     type Cart {
       id: ID!,
@@ -116,13 +130,17 @@ export const schema = createSchema({
       productId: ID!,
       qty: Int!
     }
+    input ClearCartInput {
+      cartId: ID!
+    }
     type Query {
       products: [Product!]!,
       carts: [Cart!]!
     }
     type Mutation {
       updateProduct(input: UpdateProductInput!): Product!,
-      addProductToCart(input: AddProductToCartInput!): [Cart]!
+      addProductToCart(input: AddProductToCartInput!): Cart!,
+      clearCart(input: ClearCartInput): Cart
     }
   `,
   resolvers: {
@@ -158,7 +176,8 @@ export const schema = createSchema({
         const isInCart = cart.lines.find(line => line.product.id === product.id)
         if (isInCart) {
           isInCart.qty = isInCart.qty + qty
-          return getCarts()
+          console.log(isInCart.qty)
+          return calculateCart(cart)
         }
         const cartLine: CartLine = {
           id: randomUUID(),
@@ -167,7 +186,17 @@ export const schema = createSchema({
         }
 
         cart.lines.push(cartLine)
-        return getCarts()
+        return calculateCart(cart)
+      },
+      clearCart: (parent: unknown, args: { input: ClearCartInput }) => {
+        const cart = carts.find(cart => cart.id === args.input.cartId)
+        if (cart?.lines) {
+          cart.lines = []
+        }
+        if (cart) {
+          return calculateCart(cart)
+        }
+        return null
       }
     }
   }
